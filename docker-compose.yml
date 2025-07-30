@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: streamkit-postgres
+    environment:
+      POSTGRES_DB: streamkit
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./internal/api/migrations:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - streamkit-network
+
+  # Go API Server
+  api:
+    build: .
+    container_name: streamkit-api
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: streamkit
+      RTMP_HOST: localhost
+      STREAM_HTTP_HOST: localhost:8081
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - streamkit-network
+
+  # RTMP Server
+  rtmp:
+    build: ./internal/RTMP-server
+    container_name: streamkit-rtmp
+    ports:
+      - "1935:1935"  # RTMP
+      - "8081:80"    # HTTP (for HLS playback and stats)
+    volumes:
+      - ./internal/RTMP-server/hls:/tmp/hls
+    restart: unless-stopped
+    networks:
+      - streamkit-network
+
+volumes:
+  postgres_data:
+
+networks:
+  streamkit-network:
+    driver: bridge 

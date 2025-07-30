@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTMP Stream Player</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            margin-bottom: 20px;
+        }
+        video {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .stream-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .play-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .play-button:hover {
+            background-color: #0056b3;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #e7f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .info h3 {
+            margin-top: 0;
+            color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RTMP Stream Player</h1>
+        
+        <div class="info">
+            <h3>How to use:</h3>
+            <ol>
+                <li>Start streaming in OBS with server: <code>rtmp://localhost:1935/live</code></li>
+                <li>Use stream key: <code>test</code> (or any name you want)</li>
+                <li>Enter the stream name below and click "Play Stream"</li>
+            </ol>
+        </div>
+
+        <div class="video-container">
+            <video id="video" controls></video>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="streamName" class="stream-input" placeholder="Enter stream name (e.g., test)" value="test">
+            <br>
+            <button onclick="playStream()" class="play-button">Play Stream</button>
+            <button onclick="stopStream()" class="play-button" style="background-color: #dc3545;">Stop Stream</button>
+        </div>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        let hls = null;
+        const video = document.getElementById('video');
+        const statusDiv = document.getElementById('status');
+
+        function updateStatus(message, isError = false) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${isError ? 'error' : 'connected'}`;
+        }
+
+        function playStream() {
+            const streamName = document.getElementById('streamName').value.trim();
+            if (!streamName) {
+                updateStatus('Please enter a stream name', true);
+                return;
+            }
+
+            // Stop any existing stream
+            if (hls) {
+                hls.destroy();
+                hls = null;
+            }
+
+            const streamUrl = `http://localhost:8081/hls/${streamName}.m3u8`;
+            updateStatus(`Connecting to: ${streamUrl}`);
+
+            if (Hls.isSupported()) {
+                hls = new Hls();
+                hls.loadSource(streamUrl);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    updateStatus('Stream connected successfully!');
+                    video.play();
+                });
+
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    if (data.fatal) {
+                        updateStatus(`Error: ${data.details}`, true);
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // For Safari
+                video.src = streamUrl;
+                video.addEventListener('loadedmetadata', function() {
+                    updateStatus('Stream connected successfully!');
+                    video.play();
+                });
+                video.addEventListener('error', function() {
+                    updateStatus('Error loading stream', true);
+                });
+            } else {
+                updateStatus('HLS is not supported in this browser', true);
+            }
+        }
+
+        function stopStream() {
+            if (hls) {
+                hls.destroy();
+                hls = null;
+            }
+            video.pause();
+            video.src = '';
+            updateStatus('Stream stopped');
+        }
+
+        // Auto-play the default stream on page load
+        window.addEventListener('load', function() {
+            setTimeout(playStream, 1000);
+        });
+    </script>
+</body>
+</html> 
