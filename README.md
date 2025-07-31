@@ -1,20 +1,26 @@
 # StreamKit - RTMP Streaming Server with Go API
 
-A complete streaming solution with Go-based HLS encoding, built with Go API and PostgreSQL.
+A complete streaming solution with separate encoding service, built with Go API and PostgreSQL.
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   OBS Studio   │───▶│  RTMP Server    │───▶│  Go API        │
-│   (Client)     │    │  (Ingest Only)  │    │  (HLS Encoder)  │
+│   OBS Studio   │───▶│  RTMP Server    │───▶│  Encoder       │
+│   (Client)     │    │  (Ingest Only)  │    │  (HLS Service)  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                               │                        │
                               ▼                        ▼
                        ┌─────────────────┐    ┌─────────────────┐
-                       │  PostgreSQL     │    │  HLS Files      │
-                       │  (Database)     │    │  (Shared Volume)│
+                       │  Go API        │    │  HLS Files      │
+                       │  (Management)   │    │  (Shared Volume)│
                        └─────────────────┘    └─────────────────┘
+                              │
+                              ▼
+                       ┌─────────────────┐
+                       │  PostgreSQL     │
+                       │  (Database)     │
+                       └─────────────────┘
 ```
 
 ## 🚀 Quick Start
@@ -55,14 +61,15 @@ curl http://localhost:8081/stat
 
 ### 2. **Go API** (`streamkit-api`)
 - **Port**: 8080
-- **Purpose**: Stream management, metadata, and HLS encoding
-- **Features**: 
-  - CRUD operations
-  - UUID stream keys
-  - Go-based FFmpeg encoding
-  - Automatic stream encoding
+- **Purpose**: Stream management and metadata
+- **Features**: CRUD operations, UUID stream keys
 
-### 3. **PostgreSQL** (`streamkit-postgres`)
+### 3. **Encoder Service** (`streamkit-encoder`)
+- **Purpose**: Monitors RTMP streams and encodes to HLS
+- **Features**: Automatic stream detection, FFmpeg encoding
+- **Output**: `/tmp/hls/{stream_key}/playlist.m3u8`
+
+### 4. **PostgreSQL** (`streamkit-postgres`)
 - **Port**: 5432
 - **Purpose**: Stream metadata storage
 
@@ -100,32 +107,29 @@ curl -X POST http://localhost:8080/api/streams \
 | `PUT` | `/api/streams/{id}` | Update stream |
 | `DELETE` | `/api/streams/{id}` | Delete stream |
 | `PATCH` | `/api/streams/{id}/status` | Update stream status |
-| `POST` | `/api/streams/{stream_key}/encode/start` | Start encoding |
-| `POST` | `/api/streams/{stream_key}/encode/stop` | Stop encoding |
-| `GET` | `/api/streams/{stream_key}/encode/status` | Get encoding status |
 
 ## 📁 Project Structure
 
 ```
 streamkit/
-├── cmd/server/main.go          # Go API entry point
+├── cmd/server/main.go              # Go API entry point
 ├── internal/
-│   ├── api/                    # Go API layers
-│   │   ├── handlers/           # HTTP handlers
-│   │   ├── models/             # Data models
-│   │   ├── repos/              # Database layer
-│   │   ├── routes/             # Route definitions
-│   │   └── service/            # Business logic
-│   ├── RTMP-server/            # RTMP server
-│   │   ├── Dockerfile          # RTMP container
-│   │   ├── nginx.conf          # NGINX config
-│   │   └── player.html         # Web player
-│   └── encoder/                # Go HLS encoder
-│       └── encoder.go          # Encoding logic
-├── docker-compose.yml          # Multi-service setup
-├── Dockerfile                  # Go API container (with FFmpeg)
-├── go.mod                      # Go dependencies
-└── README.md                   # This file
+│   ├── api/                        # Go API layers
+│   │   ├── handlers/               # HTTP handlers
+│   │   ├── models/                 # Data models
+│   │   ├── repos/                  # Database layer
+│   │   ├── routes/                 # Route definitions
+│   │   └── service/                # Business logic
+│   ├── RTMP-server/                # RTMP server
+│   │   ├── Dockerfile              # RTMP container
+│   │   ├── nginx.conf              # NGINX config
+│   │   └── player.html             # Web player
+│   └── encoder-service/            # HLS encoder service
+│       └── main.go                 # Encoder service
+├── docker-compose.yml              # Multi-service setup
+├── Dockerfile                      # Go API container
+├── go.mod                          # Go dependencies
+└── README.md                       # This file
 ```
 
 ## 🔍 Monitoring
@@ -145,6 +149,11 @@ docker-compose logs api
 docker-compose logs rtmp
 ```
 
+### Encoder Service Logs
+```bash
+docker-compose logs encoder
+```
+
 ## 🛠️ Development
 
 ### Rebuild Services
@@ -155,6 +164,7 @@ docker-compose build
 # Rebuild specific service
 docker-compose build api
 docker-compose build rtmp
+docker-compose build encoder
 ```
 
 ### Database Migrations
@@ -178,15 +188,11 @@ curl http://localhost:8081/health
 curl -X POST http://localhost:8080/api/streams \
   -H "Content-Type: application/json" \
   -d '{"title":"Test","stream_name":"test","stream_created_by":"user"}'
-
-# Test encoding control
-curl -X POST http://localhost:8080/api/streams/{stream_key}/encode/start
-curl -X GET http://localhost:8080/api/streams/{stream_key}/encode/status
 ```
 
 ## 📦 Features
 
-- ✅ **Go-based Encoding**: HLS encoding handled by Go service with FFmpeg
+- ✅ **Separate Encoder Service**: Dedicated service for HLS encoding
 - ✅ **Auto-scaling**: Each stream gets its own encoding process
 - ✅ **UUID Stream Keys**: Secure, unique stream identifiers
 - ✅ **RESTful API**: Complete CRUD operations
@@ -195,7 +201,7 @@ curl -X GET http://localhost:8080/api/streams/{stream_key}/encode/status
 - ✅ **PostgreSQL**: Reliable data storage
 - ✅ **CORS Support**: Web-friendly API
 - ✅ **Health Checks**: Service monitoring
-- ✅ **Encoding Control**: Manual start/stop/status endpoints
+- ✅ **Simple Architecture**: Clean separation of concerns
 
 ## 🚀 Production Considerations
 

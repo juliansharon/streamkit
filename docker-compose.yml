@@ -16,7 +16,7 @@ services:
     networks:
       - streamkit-network
 
-  # Go API Server (with FFmpeg for HLS encoding)
+  # Go API Server
   api:
     build: .
     container_name: streamkit-api
@@ -30,8 +30,6 @@ services:
       PORT: 8080
     ports:
       - "8080:8080"
-    volumes:
-      - hls_output:/tmp/hls
     depends_on:
       - postgres
     networks:
@@ -48,6 +46,22 @@ services:
       - hls_output:/tmp/hls
     networks:
       - streamkit-network
+
+  # HLS Encoder Service (Separate)
+  encoder:
+    build: .
+    container_name: streamkit-encoder
+    environment:
+      RTMP_SERVER: rtmp
+      RTMP_PORT: 1935
+      HLS_OUTPUT_DIR: /tmp/hls
+    volumes:
+      - hls_output:/tmp/hls
+    depends_on:
+      - rtmp
+    networks:
+      - streamkit-network
+    command: ["./encoder"]
 
 volumes:
   postgres_data:

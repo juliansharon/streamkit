@@ -18,19 +18,13 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/server
 # Final stage
 FROM alpine:latest
 
-# Install FFmpeg and other runtime dependencies
-RUN apk add --no-cache \
-    ffmpeg \
-    ca-certificates \
-    && rm -rf /var/cache/apk/*
+# Install runtime dependencies
+RUN apk add --no-cache ca-certificates
 
 WORKDIR /root/
 
 # Copy the binary from builder stage
 COPY --from=builder /app/main .
-
-# Create HLS output directory
-RUN mkdir -p /tmp/hls
 
 EXPOSE 8080
 

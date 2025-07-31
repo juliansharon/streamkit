@@ -17,12 +17,4 @@ func SetupStreamRoutes(router *mux.Router, handler *handlers.StreamHandler) {
 	router.HandleFunc("/api/streams/{id:[0-9]+}", handler.DeleteStream).Methods("DELETE")
 	router.HandleFunc("/api/streams/{id:[0-9]+}/status", handler.UpdateStreamStatus).
 		Methods("PATCH")
-
-	// Encoder control endpoints
-	router.HandleFunc("/api/streams/{streamKey}/encode/start", handler.StartStreamEncoding).
-		Methods("POST")
-	router.HandleFunc("/api/streams/{streamKey}/encode/stop", handler.StopStreamEncoding).
-		Methods("POST")
-	router.HandleFunc("/api/streams/{streamKey}/encode/status", handler.GetStreamEncodingStatus).
-		Methods("GET")
 }
