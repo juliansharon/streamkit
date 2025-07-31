@@ -2,10 +2,11 @@ FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
+# Install build dependencies
+RUN apk add --no-cache git
+
 # Copy go mod files
 COPY go.mod go.sum ./
-
-# Download dependencies
 RUN go mod download
 
 # Copy source code
@@ -17,15 +18,20 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/server
 # Final stage
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates
+# Install FFmpeg and other runtime dependencies
+RUN apk add --no-cache \
+    ffmpeg \
+    ca-certificates \
+    && rm -rf /var/cache/apk/*
 
 WORKDIR /root/
 
 # Copy the binary from builder stage
 COPY --from=builder /app/main .
 
-# Expose port
+# Create HLS output directory
+RUN mkdir -p /tmp/hls
+
 EXPOSE 8080
 
-# Run the binary
 CMD ["./main"] 

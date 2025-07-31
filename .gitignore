@@ -57,6 +57,11 @@ dist/
 *.db
 *.sqlite
 
+# HLS video files (streaming segments)
+*.ts
+*.m3u8
+internal/RTMP-server/hls/
+
 # Node modules (if any frontend)
 node_modules/
 npm-debug.log*

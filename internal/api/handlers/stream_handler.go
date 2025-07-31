@@ -296,3 +296,96 @@ func (h *StreamHandler) UpdateStreamStatus(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(fullStream)
 }
+
+// StartStreamEncoding handles POST /api/streams/{streamKey}/encode/start
+func (h *StreamHandler) StartStreamEncoding(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	streamKey := vars["streamKey"]
+
+	h.logger.Info("Starting stream encoding", zap.String("stream_key", streamKey))
+
+	if err := h.service.StartStreamEncoding(streamKey); err != nil {
+		h.logger.Error("Error starting stream encoding",
+			zap.String("stream_key", streamKey),
+			zap.Error(err),
+		)
+		http.Error(
+			w,
+			"Failed to start stream encoding: "+err.Error(),
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	h.logger.Info("Successfully started stream encoding", zap.String("stream_key", streamKey))
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message":    "Stream encoding started",
+		"stream_key": streamKey,
+	})
+}
+
+// StopStreamEncoding handles POST /api/streams/{streamKey}/encode/stop
+func (h *StreamHandler) StopStreamEncoding(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	streamKey := vars["streamKey"]
+
+	h.logger.Info("Stopping stream encoding", zap.String("stream_key", streamKey))
+
+	if err := h.service.StopStreamEncoding(streamKey); err != nil {
+		h.logger.Error("Error stopping stream encoding",
+			zap.String("stream_key", streamKey),
+			zap.Error(err),
+		)
+		http.Error(
+			w,
+			"Failed to stop stream encoding: "+err.Error(),
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	h.logger.Info("Successfully stopped stream encoding", zap.String("stream_key", streamKey))
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message":    "Stream encoding stopped",
+		"stream_key": streamKey,
+	})
+}
+
+// GetStreamEncodingStatus handles GET /api/streams/{streamKey}/encode/status
+func (h *StreamHandler) GetStreamEncodingStatus(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	streamKey := vars["streamKey"]
+
+	h.logger.Info("Getting stream encoding status", zap.String("stream_key", streamKey))
+
+	isEncoding, err := h.service.GetStreamEncodingStatus(streamKey)
+	if err != nil {
+		h.logger.Error("Error getting stream encoding status",
+			zap.String("stream_key", streamKey),
+			zap.Error(err),
+		)
+		http.Error(
+			w,
+			"Failed to get stream encoding status: "+err.Error(),
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	h.logger.Info("Successfully retrieved stream encoding status",
+		zap.String("stream_key", streamKey),
+		zap.Bool("is_encoding", isEncoding),
+	)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"stream_key":  streamKey,
+		"is_encoding": isEncoding,
+	})
+}

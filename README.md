@@ -1,228 +1,212 @@
-# StreamKit
+# StreamKit - RTMP Streaming Server with Go API
 
-A complete live streaming platform with RTMP server, Go API, and PostgreSQL database.
+A complete streaming solution with Go-based HLS encoding, built with Go API and PostgreSQL.
 
-## 🚀 Features
+## 🏗️ Architecture
 
-- **RTMP Server** - NGINX-RTMP for live streaming
-- **HLS Playback** - HTTP Live Streaming for web playback
-- **Go API** - RESTful API for stream management
-- **PostgreSQL** - Database for stream metadata
-- **Web Player** - HTML5 player for viewing streams
-- **CRUD Operations** - Complete stream management
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   OBS Studio   │───▶│  RTMP Server    │───▶│  Go API        │
+│   (Client)     │    │  (Ingest Only)  │    │  (HLS Encoder)  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                              │                        │
+                              ▼                        ▼
+                       ┌─────────────────┐    ┌─────────────────┐
+                       │  PostgreSQL     │    │  HLS Files      │
+                       │  (Database)     │    │  (Shared Volume)│
+                       └─────────────────┘    └─────────────────┘
+```
 
-## 📋 Prerequisites
+## 🚀 Quick Start
 
+### Prerequisites
 - Docker and Docker Compose
-- Go 1.21+ (for local development)
-
-## 🏃‍♂️ Quick Start
+- Git
 
 ### 1. Clone and Setup
-
 ```bash
-git clone <repository-url>
+git clone <your-repo-url>
 cd streamkit
 ```
 
-### 2. Start All Services
-
+### 2. Start Services
 ```bash
 docker-compose up -d
 ```
 
-This will start:
-- **PostgreSQL** on port 5432
-- **Go API** on port 8080
-- **RTMP Server** on port 1935
-- **RTMP HTTP** on port 8081
-
-### 3. Check Services
-
+### 3. Verify Services
 ```bash
-# Check if all containers are running
+# Check all services are running
 docker-compose ps
 
 # Check API health
 curl http://localhost:8080/health
 
-# Check RTMP stats
+# Check RTMP server stats
 curl http://localhost:8081/stat
 ```
 
-## 📚 API Usage
+## 📋 Services
 
-### Create a Stream
+### 1. **RTMP Server** (`streamkit-rtmp`)
+- **Port**: 1935 (RTMP), 8081 (HTTP)
+- **Purpose**: RTMP ingest only
+- **URL**: `rtmp://localhost:1935/live/{stream_key}`
 
+### 2. **Go API** (`streamkit-api`)
+- **Port**: 8080
+- **Purpose**: Stream management, metadata, and HLS encoding
+- **Features**: 
+  - CRUD operations
+  - UUID stream keys
+  - Go-based FFmpeg encoding
+  - Automatic stream encoding
+
+### 3. **PostgreSQL** (`streamkit-postgres`)
+- **Port**: 5432
+- **Purpose**: Stream metadata storage
+
+## 🎯 Usage
+
+### 1. Create a Stream
 ```bash
 curl -X POST http://localhost:8080/api/streams \
   -H "Content-Type: application/json" \
   -d '{
     "title": "My Gaming Stream",
-    "stream_name": "gaming",
+    "stream_name": "gaming-stream",
     "stream_created_by": "gamer123",
     "description": "Live gaming session"
   }'
 ```
 
-### Get All Streams
+### 2. Configure OBS Studio
+- **Server**: `rtmp://localhost:1935/live`
+- **Stream Key**: Use the `stream_key` from the API response
 
-```bash
-curl http://localhost:8080/api/streams
-```
+### 3. View Stream
+- **HLS URL**: `http://localhost:8081/hls/{stream_key}/playlist.m3u8`
+- **Player**: `http://localhost:8081/player`
 
-### Get Stream by ID
+## 🔧 API Endpoints
 
-```bash
-curl http://localhost:8080/api/streams/1
-```
-
-## 🎥 Streaming with OBS
-
-1. **Create a stream** using the API
-2. **In OBS Studio:**
-   - Server: `rtmp://localhost:1935/live`
-   - Stream Key: `{stream_key_from_api}`
-3. **Start streaming**
-
-## 📺 Viewing Streams
-
-- **Web Player**: `http://localhost:8081/player.html`
-- **Direct HLS**: `http://localhost:8081/hls/{stream_key}.m3u8`
-- **Stats Page**: `http://localhost:8081/stat`
-
-## 🛠️ Development
-
-### Local Development
-
-1. **Install Go dependencies:**
-```bash
-go mod tidy
-```
-
-2. **Set up environment variables:**
-```bash
-# Create .env file with your configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=password
-DB_NAME=streamkit
-PORT=8080
-RTMP_HOST=localhost
-```
-
-3. **Run the API locally:**
-```bash
-go run cmd/server/main.go
-```
-
-### Database Migrations
-
-The database schema is automatically created when PostgreSQL starts up. The migration file is located at:
-`internal/api/migrations/001_create_live_streams_table.sql`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | API health check |
+| `POST` | `/api/streams` | Create new stream |
+| `GET` | `/api/streams` | Get all streams |
+| `GET` | `/api/streams/{id}` | Get stream by ID |
+| `GET` | `/api/streams/key/{stream_key}` | Get stream by key |
+| `PUT` | `/api/streams/{id}` | Update stream |
+| `DELETE` | `/api/streams/{id}` | Delete stream |
+| `PATCH` | `/api/streams/{id}/status` | Update stream status |
+| `POST` | `/api/streams/{stream_key}/encode/start` | Start encoding |
+| `POST` | `/api/streams/{stream_key}/encode/stop` | Stop encoding |
+| `GET` | `/api/streams/{stream_key}/encode/status` | Get encoding status |
 
 ## 📁 Project Structure
 
 ```
 streamkit/
-├── cmd/
-│   └── server/
-│       └── main.go          # Application entry point
+├── cmd/server/main.go          # Go API entry point
 ├── internal/
-│   ├── api/
-│   │   ├── handlers/        # HTTP handlers
-│   │   ├── models/          # Data models
-│   │   ├── repos/           # Database repositories
-│   │   ├── routes/          # Route definitions
-│   │   ├── service/         # Business logic
-│   │   └── migrations/      # Database migrations
-│   └── RTMP-server/
-│       ├── Dockerfile       # Custom RTMP server Dockerfile
-│       ├── nginx.conf       # RTMP server configuration
-│       ├── player.html      # Web player
-│       └── hls/             # HLS files directory
-├── docker-compose.yml       # All services configuration
-├── Dockerfile               # API server Dockerfile
-├── go.mod                   # Go module definition
-└── README.md
+│   ├── api/                    # Go API layers
+│   │   ├── handlers/           # HTTP handlers
+│   │   ├── models/             # Data models
+│   │   ├── repos/              # Database layer
+│   │   ├── routes/             # Route definitions
+│   │   └── service/            # Business logic
+│   ├── RTMP-server/            # RTMP server
+│   │   ├── Dockerfile          # RTMP container
+│   │   ├── nginx.conf          # NGINX config
+│   │   └── player.html         # Web player
+│   └── encoder/                # Go HLS encoder
+│       └── encoder.go          # Encoding logic
+├── docker-compose.yml          # Multi-service setup
+├── Dockerfile                  # Go API container (with FFmpeg)
+├── go.mod                      # Go dependencies
+└── README.md                   # This file
 ```
 
-## 🔧 Configuration
+## 🔍 Monitoring
 
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DB_HOST` | `localhost` | PostgreSQL host |
-| `DB_PORT` | `5432` | PostgreSQL port |
-| `DB_USER` | `postgres` | Database user |
-| `DB_PASSWORD` | `password` | Database password |
-| `DB_NAME` | `streamkit` | Database name |
-| `PORT` | `8080` | API server port |
-| `RTMP_HOST` | `localhost` | RTMP server host |
-
-### Ports
-
-| Service | Port | Description |
-|---------|------|-------------|
-| API Server | 8080 | Go API endpoints |
-| RTMP Server | 1935 | RTMP ingest |
-| RTMP HTTP | 8081 | HLS playback & stats |
-| PostgreSQL | 5432 | Database |
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **Port conflicts**: Make sure ports 8080, 8081, 1935, and 5432 are available
-2. **Database connection**: Wait for PostgreSQL to fully start before the API
-3. **RTMP not working**: Check if the nginx-rtmp container is running
-
-### Logs
-
+### RTMP Server Stats
 ```bash
-# View all logs
-docker-compose logs
+curl http://localhost:8081/stat
+```
 
-# View specific service logs
+### API Logs
+```bash
 docker-compose logs api
-docker-compose logs rtmp
-docker-compose logs postgres
 ```
 
-### Useful Commands
-
+### RTMP Server Logs
 ```bash
-# Start all services
-docker-compose up -d
+docker-compose logs rtmp
+```
 
-# Stop all services
-docker-compose down
+## 🛠️ Development
 
-# Rebuild and start
-docker-compose up --build -d
+### Rebuild Services
+```bash
+# Rebuild all services
+docker-compose build
 
-# View running containers
-docker-compose ps
+# Rebuild specific service
+docker-compose build api
+docker-compose build rtmp
+```
 
+### Database Migrations
+```bash
 # Access PostgreSQL
 docker-compose exec postgres psql -U postgres -d streamkit
+
+# Run migration manually
+docker-compose exec postgres psql -U postgres -d streamkit -f /tmp/migration.sql
 ```
 
-## 📖 API Documentation
+### Testing
+```bash
+# Test API
+curl http://localhost:8080/health
 
-Complete API documentation is available at:
-`internal/api/README.md`
+# Test RTMP server
+curl http://localhost:8081/health
 
-## 🤝 Contributing
+# Test stream creation
+curl -X POST http://localhost:8080/api/streams \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Test","stream_name":"test","stream_created_by":"user"}'
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+# Test encoding control
+curl -X POST http://localhost:8080/api/streams/{stream_key}/encode/start
+curl -X GET http://localhost:8080/api/streams/{stream_key}/encode/status
+```
+
+## 📦 Features
+
+- ✅ **Go-based Encoding**: HLS encoding handled by Go service with FFmpeg
+- ✅ **Auto-scaling**: Each stream gets its own encoding process
+- ✅ **UUID Stream Keys**: Secure, unique stream identifiers
+- ✅ **RESTful API**: Complete CRUD operations
+- ✅ **Structured Logging**: Zap logger throughout
+- ✅ **Docker Compose**: Easy deployment
+- ✅ **PostgreSQL**: Reliable data storage
+- ✅ **CORS Support**: Web-friendly API
+- ✅ **Health Checks**: Service monitoring
+- ✅ **Encoding Control**: Manual start/stop/status endpoints
+
+## 🚀 Production Considerations
+
+1. **Environment Variables**: Set proper `RTMP_HOST` for production
+2. **SSL/TLS**: Add HTTPS for production
+3. **Load Balancing**: Consider multiple RTMP servers
+4. **CDN**: Use CDN for HLS delivery
+5. **Monitoring**: Add Prometheus/Grafana
+6. **Backup**: Database backup strategy
+7. **Resource Limits**: Set CPU/memory limits for encoding processes
 
 ## 📄 License
 
-This project is licensed under the MIT License. 
+MIT License - see LICENSE file for details. 

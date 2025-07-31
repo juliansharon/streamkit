@@ -13,12 +13,10 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./internal/api/migrations:/docker-entrypoint-initdb.d
-    restart: unless-stopped
     networks:
       - streamkit-network
 
-  # Go API Server
+  # Go API Server (with FFmpeg for HLS encoding)
   api:
     build: .
     container_name: streamkit-api
@@ -29,31 +27,31 @@ services:
       DB_PASSWORD: password
       DB_NAME: streamkit
       RTMP_HOST: localhost
-      STREAM_HTTP_HOST: localhost:8081
       PORT: 8080
     ports:
       - "8080:8080"
+    volumes:
+      - hls_output:/tmp/hls
     depends_on:
       - postgres
-    restart: unless-stopped
     networks:
       - streamkit-network
 
-  # RTMP Server
+  # RTMP Server (Ingest Only)
   rtmp:
     build: ./internal/RTMP-server
     container_name: streamkit-rtmp
     ports:
-      - "1935:1935"  # RTMP
-      - "8081:80"    # HTTP (for HLS playback and stats)
+      - "1935:1935"  # RTMP port
+      - "8081:80"    # HTTP port for stats and HLS playback
     volumes:
-      - ./internal/RTMP-server/hls:/tmp/hls
-    restart: unless-stopped
+      - hls_output:/tmp/hls
     networks:
       - streamkit-network
 
 volumes:
   postgres_data:
+  hls_output:
 
 networks:
   streamkit-network:

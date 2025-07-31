@@ -6,18 +6,32 @@ import (
 
 	"streamkit/internal/api/models"
 	"streamkit/internal/api/repos"
+	"streamkit/internal/encoder"
 
 	"go.uber.org/zap"
 )
 
 type StreamService struct {
-	repo   *repos.StreamRepository
-	logger *zap.Logger
+	repo    *repos.StreamRepository
+	encoder *encoder.HLSEncoder
+	logger  *zap.Logger
 }
 
 func NewStreamService(repo *repos.StreamRepository, logger *zap.Logger) *StreamService {
-	logger.Info("Initializing StreamService")
-	return &StreamService{repo: repo, logger: logger}
+	// Initialize HLS encoder
+	hlsEncoder := encoder.NewHLSEncoder(
+		logger,
+		"/tmp/hls", // Output directory
+		"rtmp",     // RTMP server host (Docker service name)
+		"1935",     // RTMP server port
+	)
+
+	logger.Info("Initializing StreamService with HLS encoder")
+	return &StreamService{
+		repo:    repo,
+		encoder: hlsEncoder,
+		logger:  logger,
+	}
 }
 
 // CreateStream creates a new stream with auto-generated URLs
@@ -33,17 +47,14 @@ func (s *StreamService) CreateStream(stream *models.LiveStream) error {
 	if host == "" {
 		host = "localhost"
 	}
-
-	streamHttpHost := os.Getenv("STREAM_HTTP_HOST")
-	if streamHttpHost == "" {
-		streamHttpHost = "localhost"
-	}
-
 	s.logger.Info("Using RTMP_HOST", zap.String("host", host))
 
 	// Generate URLs based on stream key (will be set by repository)
-	stream.IngestURL = fmt.Sprintf("rtmp://%s/live", host)
-	stream.PlaybackURL = fmt.Sprintf("http://%s:8080/hls/{stream_key}.m3u8", host)
+	// RTMP ingest URL - stream to RTMP server
+	stream.IngestURL = fmt.Sprintf("rtmp://%s:1935/live", host)
+
+	// HLS playback URL - served by RTMP server but encoded by Go service
+	stream.PlaybackURL = fmt.Sprintf("http://%s:8081/hls/{stream_key}/playlist.m3u8", host)
 
 	s.logger.Info("Generated URLs",
 		zap.String("ingest_url", stream.IngestURL),
@@ -60,6 +71,21 @@ func (s *StreamService) CreateStream(stream *models.LiveStream) error {
 		zap.Int("id", stream.ID),
 		zap.String("stream_key", stream.StreamKey),
 	)
+
+	// Start HLS encoding for this stream
+	go func() {
+		if err := s.encoder.EncodeStream(stream.StreamKey); err != nil {
+			s.logger.Error("Failed to start HLS encoding",
+				zap.String("stream_key", stream.StreamKey),
+				zap.Error(err),
+			)
+		} else {
+			s.logger.Info("HLS encoding started",
+				zap.String("stream_key", stream.StreamKey),
+			)
+		}
+	}()
+
 	return nil
 }
 
@@ -135,7 +161,29 @@ func (s *StreamService) UpdateStream(stream *models.LiveStream) error {
 func (s *StreamService) DeleteStream(id int) error {
 	s.logger.Info("Deleting stream", zap.Int("id", id))
 
-	err := s.repo.Delete(id)
+	// Get stream details before deletion
+	stream, err := s.repo.GetByID(id)
+	if err != nil {
+		s.logger.Error("Error getting stream for deletion",
+			zap.Int("id", id),
+			zap.Error(err),
+		)
+		return err
+	}
+
+	// Stop HLS encoding for this stream
+	if stream != nil {
+		go func() {
+			if err := s.encoder.StopEncoding(stream.StreamKey); err != nil {
+				s.logger.Error("Failed to stop HLS encoding",
+					zap.String("stream_key", stream.StreamKey),
+					zap.Error(err),
+				)
+			}
+		}()
+	}
+
+	err = s.repo.Delete(id)
 	if err != nil {
 		s.logger.Error("Error deleting stream",
 			zap.Int("id", id),
@@ -183,8 +231,12 @@ func (s *StreamService) GetStreamWithFullURLs(stream *models.LiveStream) *models
 
 	// Create a copy to avoid modifying the original
 	fullStream := *stream
-	fullStream.IngestURL = fmt.Sprintf("rtmp://%s/live", host)
-	fullStream.PlaybackURL = fmt.Sprintf("http://%s:8080/hls/%s.m3u8", host, stream.StreamKey)
+	fullStream.IngestURL = fmt.Sprintf("rtmp://%s:1935/live", host)
+	fullStream.PlaybackURL = fmt.Sprintf(
+		"http://%s:8081/hls/%s/playlist.m3u8",
+		host,
+		stream.StreamKey,
+	)
 
 	s.logger.Debug("Generated full URLs",
 		zap.String("ingest_url", fullStream.IngestURL),
@@ -214,4 +266,23 @@ func (s *StreamService) GetAllStreamsWithFullURLs() ([]*models.LiveStream, error
 		zap.Int("count", len(fullStreams)),
 	)
 	return fullStreams, nil
+}
+
+// StartStreamEncoding manually starts encoding for a stream
+func (s *StreamService) StartStreamEncoding(streamKey string) error {
+	s.logger.Info("Manually starting stream encoding", zap.String("stream_key", streamKey))
+
+	return s.encoder.EncodeStream(streamKey)
+}
+
+// StopStreamEncoding manually stops encoding for a stream
+func (s *StreamService) StopStreamEncoding(streamKey string) error {
+	s.logger.Info("Manually stopping stream encoding", zap.String("stream_key", streamKey))
+
+	return s.encoder.StopEncoding(streamKey)
+}
+
+// GetStreamEncodingStatus checks if a stream is currently being encoded
+func (s *StreamService) GetStreamEncodingStatus(streamKey string) (bool, error) {
+	return s.encoder.GetStreamStatus(streamKey)
 }
