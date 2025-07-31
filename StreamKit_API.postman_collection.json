@@ -2,232 +2,467 @@
 	"info": {
 		"_postman_id": "streamkit-api-collection",
 		"name": "StreamKit API",
-		"description": "Complete API collection for StreamKit - Live Streaming Platform",
+		"description": "Complete API collection for StreamKit - Live Streaming Platform with Encoder Service and MinIO Integration",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "streamkit-api"
 	},
 	"item": [
 		{
-			"name": "Health Check",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base_url}}/health",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"health"
-					]
+			"name": "API Server",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_base_url}}/health",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Check if the API server is running"
+					},
+					"response": []
 				},
-				"description": "Check if the API server is running"
-			},
-			"response": []
+				{
+					"name": "Create Stream",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"My Gaming Stream\",\n  \"stream_name\": \"gaming-stream\",\n  \"stream_created_by\": \"gamer123\",\n  \"description\": \"Live gaming session with friends\"\n}"
+						},
+						"url": {
+							"raw": "{{api_base_url}}/api/streams",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"api",
+								"streams"
+							]
+						},
+						"description": "Create a new stream with auto-generated stream key and URLs"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Streams",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_base_url}}/api/streams",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"api",
+								"streams"
+							]
+						},
+						"description": "Retrieve all streams with full URLs"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Stream by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_base_url}}/api/streams/{{stream_id}}",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"api",
+								"streams",
+								"{{stream_id}}"
+							]
+						},
+						"description": "Get a specific stream by its ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Stream by Stream Key",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_base_url}}/api/streams/key/{{stream_key}}",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"api",
+								"streams",
+								"key",
+								"{{stream_key}}"
+							]
+						},
+						"description": "Get a stream by its stream key"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Stream",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Gaming Stream\",\n  \"stream_name\": \"updated-gaming-stream\",\n  \"stream_created_by\": \"gamer123\",\n  \"description\": \"Updated description for the gaming stream\",\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{api_base_url}}/api/streams/{{stream_id}}",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"api",
+								"streams",
+								"{{stream_id}}"
+							]
+						},
+						"description": "Update stream information"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Stream Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{api_base_url}}/api/streams/{{stream_id}}/status",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"api",
+								"streams",
+								"{{stream_id}}",
+								"status"
+							]
+						},
+						"description": "Update only the status of a stream"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Stream",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{api_base_url}}/api/streams/{{stream_id}}",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"api",
+								"streams",
+								"{{stream_id}}"
+							]
+						},
+						"description": "Delete a stream by ID"
+					},
+					"response": []
+				}
+			]
 		},
 		{
-			"name": "Create Stream",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"title\": \"My Gaming Stream\",\n  \"stream_name\": \"gaming-stream\",\n  \"stream_created_by\": \"gamer123\",\n  \"description\": \"Live gaming session with friends\"\n}"
+			"name": "Encoder Service",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{encoder_base_url}}/health",
+							"host": [
+								"{{encoder_base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Check if the encoder service is running"
+					},
+					"response": []
 				},
-				"url": {
-					"raw": "{{base_url}}/api/streams",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"streams"
-					]
+				{
+					"name": "Publish Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"stream_key\": \"{{stream_key}}\",\n  \"action\": \"publish\",\n  \"timestamp\": \"{{timestamp}}\"\n}"
+						},
+						"url": {
+							"raw": "{{encoder_base_url}}/events/published",
+							"host": [
+								"{{encoder_base_url}}"
+							],
+							"path": [
+								"events",
+								"published"
+							]
+						},
+						"description": "Send publish event to start encoding for a stream"
+					},
+					"response": []
 				},
-				"description": "Create a new stream with auto-generated stream key and URLs"
-			},
-			"response": []
+				{
+					"name": "Unpublish Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"stream_key\": \"{{stream_key}}\",\n  \"action\": \"unpublish\",\n  \"timestamp\": \"{{timestamp}}\"\n}"
+						},
+						"url": {
+							"raw": "{{encoder_base_url}}/events/published",
+							"host": [
+								"{{encoder_base_url}}"
+							],
+							"path": [
+								"events",
+								"published"
+							]
+						},
+						"description": "Send unpublish event to stop encoding for a stream"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Stream Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{encoder_base_url}}/stats",
+							"host": [
+								"{{encoder_base_url}}"
+							],
+							"path": [
+								"stats"
+							]
+						},
+						"description": "Get stream statistics from database"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Streams",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{encoder_base_url}}/streams/active",
+							"host": [
+								"{{encoder_base_url}}"
+							],
+							"path": [
+								"streams",
+								"active"
+							]
+						},
+						"description": "Get list of active streams from database"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Stream Manifest",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{encoder_base_url}}/manifest?stream_key={{stream_key}}",
+							"host": [
+								"{{encoder_base_url}}"
+							],
+							"path": [
+								"manifest"
+							],
+							"query": [
+								{
+									"key": "stream_key",
+									"value": "{{stream_key}}"
+								}
+							]
+						},
+						"description": "Get stream manifest with file information"
+					},
+					"response": []
+				}
+			]
 		},
 		{
-			"name": "Get All Streams",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base_url}}/api/streams",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"streams"
-					]
+			"name": "HLS Streaming",
+			"item": [
+				{
+					"name": "HLS Playlist",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{encoder_base_url}}/hls/{{stream_key}}/playlist.m3u8",
+							"host": [
+								"{{encoder_base_url}}"
+							],
+							"path": [
+								"hls",
+								"{{stream_key}}",
+								"playlist.m3u8"
+							]
+						},
+						"description": "Get HLS playlist (redirects to signed MinIO URL)"
+					},
+					"response": []
 				},
-				"description": "Retrieve all streams with full URLs"
-			},
-			"response": []
+				{
+					"name": "HLS Segment",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{encoder_base_url}}/hls/{{stream_key}}/segment_001.ts",
+							"host": [
+								"{{encoder_base_url}}"
+							],
+							"path": [
+								"hls",
+								"{{stream_key}}",
+								"segment_001.ts"
+							]
+						},
+						"description": "Get HLS segment (redirects to signed MinIO URL)"
+					},
+					"response": []
+				},
+				{
+					"name": "CDN HLS Playlist",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{cdn_base_url}}/hls/{{stream_key}}/playlist.m3u8",
+							"host": [
+								"{{cdn_base_url}}"
+							],
+							"path": [
+								"hls",
+								"{{stream_key}}",
+								"playlist.m3u8"
+							]
+						},
+						"description": "Get HLS playlist via CDN (if configured)"
+					},
+					"response": []
+				}
+			]
 		},
 		{
-			"name": "Get Stream by ID",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base_url}}/api/streams/{{stream_id}}",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"streams",
-						"{{stream_id}}"
-					]
+			"name": "RTMP Server",
+			"item": [
+				{
+					"name": "RTMP Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{rtmp_url}}/stat",
+							"host": [
+								"{{rtmp_url}}"
+							],
+							"path": [
+								"stat"
+							]
+						},
+						"description": "Get RTMP server statistics"
+					},
+					"response": []
 				},
-				"description": "Get a specific stream by its ID"
-			},
-			"response": []
+				{
+					"name": "RTMP Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{rtmp_url}}/health",
+							"host": [
+								"{{rtmp_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Check RTMP server health"
+					},
+					"response": []
+				}
+			]
 		},
 		{
-			"name": "Get Stream by Stream Key",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base_url}}/api/streams/key/{{stream_key}}",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"streams",
-						"key",
-						"{{stream_key}}"
-					]
-				},
-				"description": "Get a stream by its stream key"
-			},
-			"response": []
-		},
-		{
-			"name": "Update Stream",
-			"request": {
-				"method": "PUT",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"title\": \"Updated Gaming Stream\",\n  \"stream_name\": \"updated-gaming-stream\",\n  \"stream_created_by\": \"gamer123\",\n  \"description\": \"Updated description for the gaming stream\",\n  \"status\": \"active\"\n}"
-				},
-				"url": {
-					"raw": "{{base_url}}/api/streams/{{stream_id}}",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"streams",
-						"{{stream_id}}"
-					]
-				},
-				"description": "Update stream information"
-			},
-			"response": []
-		},
-		{
-			"name": "Update Stream Status",
-			"request": {
-				"method": "PATCH",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"status\": \"active\"\n}"
-				},
-				"url": {
-					"raw": "{{base_url}}/api/streams/{{stream_id}}/status",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"streams",
-						"{{stream_id}}",
-						"status"
-					]
-				},
-				"description": "Update only the status of a stream"
-			},
-			"response": []
-		},
-		{
-			"name": "Delete Stream",
-			"request": {
-				"method": "DELETE",
-				"header": [],
-				"url": {
-					"raw": "{{base_url}}/api/streams/{{stream_id}}",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"streams",
-						"{{stream_id}}"
-					]
-				},
-				"description": "Delete a stream by ID"
-			},
-			"response": []
-		},
-		{
-			"name": "RTMP Stats",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{rtmp_url}}/stat",
-					"host": [
-						"{{rtmp_url}}"
-					],
-					"path": [
-						"stat"
-					]
-				},
-				"description": "Get RTMP server statistics"
-			},
-			"response": []
-		},
-		{
-			"name": "HLS Stream URL",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{rtmp_url}}/hls/{{stream_key}}.m3u8",
-					"host": [
-						"{{rtmp_url}}"
-					],
-					"path": [
-						"hls",
-						"{{stream_key}}.m3u8"
-					]
-				},
-				"description": "Get HLS stream URL (for testing - will return m3u8 playlist)"
-			},
-			"response": []
+			"name": "MinIO Console",
+			"item": [
+				{
+					"name": "MinIO Console",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{minio_console_url}}",
+							"host": [
+								"{{minio_console_url}}"
+							],
+							"path": []
+						},
+						"description": "Access MinIO web console (login: minioadmin/minioadmin)"
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"event": [
@@ -236,7 +471,8 @@
 			"script": {
 				"type": "text/javascript",
 				"exec": [
-					""
+					"// Set timestamp for events",
+					"pm.globals.set('timestamp', new Date().toISOString());"
 				]
 			}
 		},
@@ -252,13 +488,28 @@
 	],
 	"variable": [
 		{
-			"key": "base_url",
+			"key": "api_base_url",
 			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "encoder_base_url",
+			"value": "http://localhost:8082",
 			"type": "string"
 		},
 		{
 			"key": "rtmp_url",
 			"value": "http://localhost:8081",
+			"type": "string"
+		},
+		{
+			"key": "minio_console_url",
+			"value": "http://localhost:9001",
+			"type": "string"
+		},
+		{
+			"key": "cdn_base_url",
+			"value": "https://cdn.example.com",
 			"type": "string"
 		},
 		{
@@ -269,6 +520,11 @@
 		{
 			"key": "stream_key",
 			"value": "550e8400-e29b-41d4-a716-446655440000",
+			"type": "string"
+		},
+		{
+			"key": "timestamp",
+			"value": "",
 			"type": "string"
 		}
 	]
