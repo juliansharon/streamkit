@@ -31,7 +31,7 @@ A complete streaming solution with separate encoding service, built with Go API 
 
 ### 1. Clone and Setup
 ```bash
-git clone <your-repo-url>
+git git@github.com:juliansharon/streamkit.git
 cd streamkit
 ```
 
