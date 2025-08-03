@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -49,11 +48,11 @@ func (h *HLSHandler) ServeHLSPlaylist(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	h.setCORSHeaders(w)
 
-	// Generate signed URL for the file
+	// Get file content directly from storage
 	s3Key := fmt.Sprintf("hls/%s/%s", streamKey, fileName)
-	signedURL, err := h.storageService.GetSignedURL(s3Key, 1*time.Hour)
+	fileContent, err := h.storageService.GetFileContent(s3Key)
 	if err != nil {
-		h.logger.Error("Failed to generate signed URL",
+		h.logger.Error("Failed to get file content",
 			zap.String("stream_key", streamKey),
 			zap.String("file_name", fileName),
 			zap.Error(err),
@@ -62,8 +61,12 @@ func (h *HLSHandler) ServeHLSPlaylist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Redirect to signed URL
-	http.Redirect(w, r, signedURL, http.StatusTemporaryRedirect)
+	// Set content type
+	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(fileContent)))
+
+	// Serve file content directly
+	w.Write(fileContent)
 }
 
 // ServeHLSSegment serves an HLS segment file
@@ -87,11 +90,11 @@ func (h *HLSHandler) ServeHLSSegment(w http.ResponseWriter, r *http.Request) {
 	// Set CORS headers
 	h.setCORSHeaders(w)
 
-	// Generate signed URL for the segment
+	// Get file content directly from storage
 	s3Key := fmt.Sprintf("hls/%s/%s", streamKey, segmentName)
-	signedURL, err := h.storageService.GetSignedURL(s3Key, 1*time.Hour)
+	fileContent, err := h.storageService.GetFileContent(s3Key)
 	if err != nil {
-		h.logger.Error("Failed to generate signed URL for segment",
+		h.logger.Error("Failed to get file content for segment",
 			zap.String("stream_key", streamKey),
 			zap.String("segment_name", segmentName),
 			zap.Error(err),
@@ -100,8 +103,12 @@ func (h *HLSHandler) ServeHLSSegment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Redirect to signed URL
-	http.Redirect(w, r, signedURL, http.StatusTemporaryRedirect)
+	// Set content type
+	w.Header().Set("Content-Type", "video/mp2t")
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(fileContent)))
+
+	// Serve file content directly
+	w.Write(fileContent)
 }
 
 // GetStreamManifest returns stream manifest information

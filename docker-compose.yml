@@ -103,6 +103,17 @@ services:
     networks:
       - streamkit-network
 
+  # Web Player for testing HLS streams
+  player:
+    image: nginx:alpine
+    container_name: streamkit-player
+    ports:
+      - "8083:80"
+    volumes:
+      - ./internal/RTMP-server/player.html:/usr/share/nginx/html/index.html
+    networks:
+      - streamkit-network
+
 volumes:
   postgres_data:
   minio_data:

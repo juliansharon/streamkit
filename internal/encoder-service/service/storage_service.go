@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -142,6 +143,25 @@ func (s *StorageService) UploadHLSFiles(streamKey, localDir string) error {
 	)
 
 	return nil
+}
+
+// GetFileContent retrieves file content directly from storage
+func (s *StorageService) GetFileContent(key string) ([]byte, error) {
+	result, err := s.s3Client.GetObject(&s3.GetObjectInput{
+		Bucket: aws.String(s.bucketName),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get object: %w", err)
+	}
+	defer result.Body.Close()
+
+	content, err := io.ReadAll(result.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read object body: %w", err)
+	}
+
+	return content, nil
 }
 
 // GetSignedURL generates a signed URL for file access
